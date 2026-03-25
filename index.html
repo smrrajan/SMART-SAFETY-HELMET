@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeGuard Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08111f;
+    --bg-soft: #0c1830;
+    --surface: rgba(10, 18, 34, 0.78);
+    --surface-strong: rgba(12, 23, 43, 0.94);
+    --surface-alt: rgba(16, 29, 52, 0.88);
+    --border: rgba(150, 186, 255, 0.14);
+    --border-strong: rgba(150, 186, 255, 0.22);
+    --text: #edf4ff;
+    --text-dim: #a4b7d7;
+    --text-muted: #7084a8;
+    --accent: #4c8dff;
+    --accent-2: #4ce0b3;
+    --safe: #23d69b;
+    --warn: #ffbe3d;
+    --danger: #ff5f7d;
+    --safe-bg: rgba(35, 214, 155, 0.14);
+    --warn-bg: rgba(255, 190, 61, 0.14);
+    --danger-bg: rgba(255, 95, 125, 0.16);
+    --shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+    --radius-xl: 28px;
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+    --font-head: "Plus Jakarta Sans", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    min-height: 100%;
+    background:
+      radial-gradient(circle at top left, rgba(76, 141, 255, 0.18), transparent 28%),
+      radial-gradient(circle at top right, rgba(76, 224, 179, 0.12), transparent 25%),
+      linear-gradient(180deg, #08111f 0%, #060c17 100%);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: var(--font-head);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 24%),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 120px),
+      transparent;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 18%, transparent 82%, rgba(255,255,255,0.02));
+    opacity: 0.8;
+  }
+
+  .page-shell {
+    width: min(1320px, calc(100vw - 40px));
+    margin: 28px auto 40px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 26px 30px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, rgba(15, 26, 48, 0.95), rgba(8, 15, 28, 0.88));
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px);
+  }
+
+  .brand-wrap {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+
+  .brand-mark {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    font-size: 1.6rem;
+    background: linear-gradient(135deg, rgba(76, 141, 255, 0.28), rgba(76, 224, 179, 0.14));
+    border: 1px solid rgba(125, 174, 255, 0.24);
+    box-shadow: inset 0 0 30px rgba(255,255,255,0.04);
+  }
+
+  .eyebrow {
+    margin: 0 0 6px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--accent-2);
+  }
+
+  .logo {
+    margin: 0;
+    font-size: clamp(1.7rem, 2.6vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+
+  .logo span {
+    color: #8db3ff;
+  }
+
+  .brand-copy p {
+    margin: 8px 0 0;
+    max-width: 560px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    font-size: 0.96rem;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .status-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    min-width: 250px;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border-strong);
+    background: rgba(255,255,255,0.03);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1;
+  }
+
+  .status-pill::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 14px currentColor;
+  }
+
+  #serverStatus.online,
+  #sensorStatus.online {
+    color: var(--safe);
+    background: var(--safe-bg);
+    border-color: rgba(35, 214, 155, 0.26);
+  }
+
+  #serverStatus.offline,
+  #sensorStatus.offline {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-color: rgba(255, 95, 125, 0.28);
+  }
+
+  #sensorStatus.waiting {
+    color: var(--warn);
+    background: var(--warn-bg);
+    border-color: rgba(255, 190, 61, 0.28);
+  }
+
+  .sensor-seen {
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--text-muted);
+  }
+
+  .refresh-btn {
+    border: 0;
+    border-radius: 16px;
+    padding: 13px 18px;
+    min-width: 126px;
+    background: linear-gradient(135deg, #5f8fff, #8d76ff);
+    color: white;
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 18px 30px rgba(68, 100, 255, 0.24);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  }
+
+  .refresh-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 22px 34px rgba(68, 100, 255, 0.3);
+  }
+
+  main {
+    margin-top: 24px;
+    display: grid;
+    gap: 24px;
+  }
+
+  .hero-layout {
+    display: grid;
+    grid-template-columns: 1.6fr 0.95fr;
+    gap: 24px;
+  }
+
+  .panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: linear-gradient(180deg, var(--surface-strong), rgba(9, 17, 31, 0.96));
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px);
+  }
+
+  .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04), transparent 30%);
+  }
+
+  .status-hero {
+    padding: 34px;
+    min-height: 330px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+  }
+
+  .status-hero.SAFE {
+    border-color: rgba(35, 214, 155, 0.28);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34), inset 0 0 120px rgba(35, 214, 155, 0.08);
+  }
+
+  .status-hero.WARNING {
+    border-color: rgba(255, 190, 61, 0.28);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34), inset 0 0 120px rgba(255, 190, 61, 0.08);
+  }
+
+  .status-hero.DANGER {
+    border-color: rgba(255, 95, 125, 0.34);
+    box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34), inset 0 0 120px rgba(255, 95, 125, 0.1);
+  }
+
+  .hero-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .section-tag {
+    margin: 0 0 12px;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    color: var(--text-muted);
+  }
+
+  .hero-heading {
+    margin: 0;
+    max-width: 520px;
+    font-size: clamp(2rem, 4vw, 3.6rem);
+    line-height: 0.96;
+    letter-spacing: -0.06em;
+  }
+
+  .hero-copy {
+    margin: 14px 0 0;
+    max-width: 520px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    font-size: 0.98rem;
+  }
+
+  .hero-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    border: 1px solid var(--border-strong);
+    background: rgba(255,255,255,0.03);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .hero-status-chip strong {
+    color: var(--text);
+  }
+
+  .hero-center {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin: 26px 0;
+  }
+
+  .status-emoji {
+    width: 88px;
+    height: 88px;
+    border-radius: 24px;
+    display: grid;
+    place-items: center;
+    font-size: 2.3rem;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .status-label {
+    margin: 0;
+    font-size: clamp(3rem, 7vw, 5.2rem);
+    font-weight: 800;
+    letter-spacing: -0.06em;
+    line-height: 0.9;
+  }
+
+  .status-label.SAFE { color: var(--safe); }
+  .status-label.WARNING { color: var(--warn); }
+  .status-label.DANGER { color: var(--danger); }
+
+  .status-conf,
+  .status-time {
+    font-family: var(--font-mono);
+  }
+
+  .status-conf {
+    color: var(--text-dim);
+    font-size: 0.94rem;
+    margin-top: 10px;
+  }
+
+  .status-time {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-top: 8px;
+  }
+
+  .hero-footer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .hero-stat {
+    border-radius: 18px;
+    padding: 16px 18px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .hero-stat-label {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  .hero-stat-value {
+    margin-top: 10px;
+    font-size: 1.42rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .hero-side {
+    padding: 30px;
+    display: grid;
+    gap: 18px;
+    align-content: start;
+  }
+
+  .prob-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .prob-header h3,
+  .history-section h3,
+  .tester h3 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .subtle-note {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  .prob-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .prob-card {
+    border-radius: 18px;
+    padding: 16px 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .prob-topline {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  .prob-bar-track {
+    height: 10px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .prob-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+
+  .prob-safe .prob-bar-fill { background: linear-gradient(90deg, #29dca2, #4ce0b3); }
+  .prob-warn .prob-bar-fill { background: linear-gradient(90deg, #f2a321, #ffcd55); }
+  .prob-danger .prob-bar-fill { background: linear-gradient(90deg, #ff5f7d, #ff8b98); }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  .card {
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(12, 21, 39, 0.98), rgba(10, 18, 33, 0.88));
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: auto 18px 0 18px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(76, 141, 255, 0.1), rgba(76, 224, 179, 0.8));
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 26px;
+  }
+
+  .card-label {
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+    font-size: 0.73rem;
+    letter-spacing: 0.18em;
+  }
+
+  .card-icon {
+    font-size: 1.35rem;
+    opacity: 0.9;
+  }
+
+  .card-value {
+    font-size: clamp(2rem, 3vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+  }
+
+  .card-value .card-unit {
+    margin-left: 6px;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  .card-copy {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-top: 10px;
+  }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: 0.95fr 1.35fr;
+    gap: 24px;
+  }
+
+  .tester,
+  .history-section {
+    padding: 28px;
+  }
+
+  .tester-head,
+  .history-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: end;
+    margin-bottom: 22px;
+  }
+
+  .tester-fields {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-dim);
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid rgba(150, 186, 255, 0.14);
+    background: rgba(4, 9, 19, 0.7);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 0.96rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .field input:focus,
+  .field select:focus {
+    border-color: rgba(76, 141, 255, 0.45);
+    box-shadow: 0 0 0 4px rgba(76, 141, 255, 0.12);
+  }
+
+  .send-btn {
+    width: 100%;
+    border: 0;
+    padding: 15px 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #5f8fff, #8d76ff);
+    color: #fff;
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 0.98rem;
+    cursor: pointer;
+    box-shadow: 0 18px 30px rgba(68, 100, 255, 0.22);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+
+  .send-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .tester-foot {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    margin-top: 18px;
+  }
+
+  .mini-stat {
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .mini-stat span {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+  }
+
+  .mini-stat strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    padding: 16px 18px;
+    text-align: left;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  tbody tr:hover td {
+    background: rgba(76, 141, 255, 0.05);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .badge-SAFE {
+    color: var(--safe);
+    background: var(--safe-bg);
+    border: 1px solid rgba(35, 214, 155, 0.24);
+  }
+
+  .badge-WARNING {
+    color: var(--warn);
+    background: var(--warn-bg);
+    border: 1px solid rgba(255, 190, 61, 0.24);
+  }
+
+  .badge-DANGER {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border: 1px solid rgba(255, 95, 125, 0.24);
+  }
+
+  .no-data {
+    padding: 32px;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  footer {
+    margin-top: 24px;
+    padding: 22px;
+    text-align: center;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+  }
+
+  @media (max-width: 1160px) {
+    .hero-layout,
+    .content-grid,
+    .metric-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .hero-footer {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 780px) {
+    .page-shell {
+      width: min(100vw - 24px, 1320px);
+      margin: 12px auto 28px;
+    }
+
+    .topbar,
+    .header-right,
+    .hero-top,
+    .hero-center,
+    .tester-head,
+    .history-head {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .status-stack {
+      align-items: stretch;
+      min-width: auto;
+    }
+
+    .tester-fields,
+    .tester-foot {
+      grid-template-columns: 1fr;
+    }
+
+    .status-hero,
+    .hero-side,
+    .card,
+    .tester,
+    .history-section {
+      padding: 22px;
+    }
+
+    .status-emoji {
+      width: 72px;
+      height: 72px;
+      font-size: 1.9rem;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-mark">S</div>
+        <div class="brand-copy">
+          <p class="eyebrow">AI Safety Monitoring Suite</p>
+          <h1 class="logo">Safe<span>Guard</span> Control</h1>
+          <p>Professional live dashboard for ESP32 sensor telemetry, ML-powered risk classification, and operational visibility from one screen.</p>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="status-stack">
+          <span class="status-pill" id="serverStatus">Checking server</span>
+          <span class="status-pill" id="sensorStatus">ESP32 Waiting</span>
+          <div class="sensor-seen" id="sensorSeen">No ESP32 data yet</div>
+        </div>
+        <button class="refresh-btn" onclick="fetchHistory()">Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-layout">
+        <div class="panel status-hero" id="heroCard">
+          <div class="hero-top">
+            <div>
+              <p class="section-tag">Current AI Classification</p>
+              <h2 class="hero-heading">Real-time industrial safety intelligence</h2>
+              <p class="hero-copy">The model continuously evaluates gas level, temperature, and motion inputs to estimate current environmental risk in the monitored zone.</p>
+            </div>
+            <div class="hero-status-chip">
+              <span>Mode</span>
+              <strong>Live Monitoring</strong>
+            </div>
+          </div>
+
+          <div class="hero-center">
+            <div class="status-emoji" id="heroEmoji">S</div>
+            <div>
+              <div class="status-label" id="heroLabel">READY</div>
+              <div class="status-conf" id="heroConf">Waiting for sensor data...</div>
+              <div class="status-time" id="heroTime"></div>
+            </div>
+          </div>
+
+          <div class="hero-footer">
+            <div class="hero-stat">
+              <div class="hero-stat-label">Inference Engine</div>
+              <div class="hero-stat-value">Random Forest</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-label">Telemetry Source</div>
+              <div class="hero-stat-value" id="sourceIndicator">Awaiting input</div>
+            </div>
+            <div class="hero-stat">
+              <div class="hero-stat-label">Response Window</div>
+              <div class="hero-stat-value">5 sec refresh</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel hero-side">
+          <div class="prob-header">
+            <div>
+              <p class="section-tag">Probability Matrix</p>
+              <h3>Model confidence distribution</h3>
+            </div>
+            <div class="subtle-note">Each class bar updates after every prediction.</div>
+          </div>
+
+          <div class="prob-list">
+            <div class="prob-card prob-safe">
+              <div class="prob-topline">
+                <span>SAFE</span>
+                <span id="pctSafe">0.0%</span>
+              </div>
+              <div class="prob-bar-track"><div class="prob-bar-fill" id="pbSafe" style="width:0%"></div></div>
+            </div>
+
+            <div class="prob-card prob-warn">
+              <div class="prob-topline">
+                <span>WARNING</span>
+                <span id="pctWarn">0.0%</span>
+              </div>
+              <div class="prob-bar-track"><div class="prob-bar-fill" id="pbWarn" style="width:0%"></div></div>
+            </div>
+
+            <div class="prob-card prob-danger">
+              <div class="prob-topline">
+                <span>DANGER</span>
+                <span id="pctDanger">0.0%</span>
+              </div>
+              <div class="prob-bar-track"><div class="prob-bar-fill" id="pbDanger" style="width:0%"></div></div>
+            </div>
+          </div>
+
+          <div class="subtle-note">When the ESP32 is online, the dashboard will automatically switch from manual test flow to live sensor monitoring status.</div>
+        </aside>
+      </section>
+
+      <section class="metric-grid">
+        <div class="card">
+          <div class="card-top">
+            <div class="card-label">Gas Level</div>
+            <div class="card-icon">Gas</div>
+          </div>
+          <div class="card-value" id="valGas">-<span class="card-unit">ppm</span></div>
+          <div class="card-copy">MQ-series sensor reading entering the model.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-top">
+            <div class="card-label">Temperature</div>
+            <div class="card-icon">Temp</div>
+          </div>
+          <div class="card-value" id="valTemp">-<span class="card-unit">deg C</span></div>
+          <div class="card-copy">Current thermal condition captured from DHT input.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-top">
+            <div class="card-label">Motion State</div>
+            <div class="card-icon">PIR</div>
+          </div>
+          <div class="card-value" id="valMotion">-</div>
+          <div class="card-copy">Binary motion signal from the monitored zone.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-top">
+            <div class="card-label">System Mode</div>
+            <div class="card-icon">Live</div>
+          </div>
+          <div class="card-value" id="modeCard">Dashboard</div>
+          <div class="card-copy">Switches automatically as API and ESP32 state changes.</div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <section class="panel tester">
+          <div class="tester-head">
+            <div>
+              <p class="section-tag">Manual Verification</p>
+              <h3>Send test sensor payload</h3>
+            </div>
+            <div class="subtle-note">Useful for validating the model even before ESP32 hardware is connected.</div>
+          </div>
+
+          <div class="tester-fields">
+            <div class="field">
+              <label for="inputGas">Gas PPM</label>
+              <input type="number" id="inputGas" value="150" min="0" max="1000">
+            </div>
+
+            <div class="field">
+              <label for="inputTemp">Temperature (deg C)</label>
+              <input type="number" id="inputTemp" value="25" min="-40" max="125">
+            </div>
+
+            <div class="field">
+              <label for="inputMotion">Motion</label>
+              <select id="inputMotion">
+                <option value="0">No Motion (0)</option>
+                <option value="1">Motion (1)</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="send-btn" onclick="manualPredict()">Run Prediction</button>
+
+          <div class="tester-foot">
+            <div class="mini-stat">
+              <span>Recommended Use</span>
+              <strong>Hardware-free testing and API validation</strong>
+            </div>
+            <div class="mini-stat">
+              <span>Live Status</span>
+              <strong id="manualHint">Manual mode active until ESP32 sends data</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel history-section">
+          <div class="history-head">
+            <div>
+              <p class="section-tag">Audit Trail</p>
+              <h3>Recent sensor readings</h3>
+            </div>
+            <div class="subtle-note">Latest 20 predictions stored in the SQLite history log.</div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Gas (ppm)</th>
+                  <th>Temp (deg C)</th>
+                  <th>Motion</th>
+                  <th>Prediction</th>
+                  <th>Confidence</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody">
+                <tr><td colspan="6" class="no-data">No readings yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer>SafeGuard Control Center | ESP32 + Flask API + Random Forest + SQLite history tracking</footer>
+  </div>
+
+<script>
+  const API_BASE = window.location.protocol === "file:"
+    ? "http://localhost:5000"
+    : window.location.origin;
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("en-GB", { hour12: false });
+  }
+
+  function fmtDateTime(iso) {
+    if (!iso) return "No ESP32 data yet";
+    const d = new Date(iso);
+    return d.toLocaleString("en-GB", { hour12: false });
+  }
+
+  function applyHero(data) {
+    const hero = document.getElementById("heroCard");
+    const label = document.getElementById("heroLabel");
+    const emoji = document.getElementById("heroEmoji");
+    const conf = document.getElementById("heroConf");
+    const time = document.getElementById("heroTime");
+    const sourceIndicator = document.getElementById("sourceIndicator");
+
+    const p = data.prediction;
+    ["SAFE", "WARNING", "DANGER"].forEach((c) => {
+      hero.classList.remove(c);
+      label.classList.remove(c);
+    });
+    hero.classList.add(p);
+    label.classList.add(p);
+
+    label.textContent = p;
+    emoji.textContent = { SAFE: "OK", WARNING: "!", DANGER: "X" }[p] || "AI";
+    conf.textContent = `Confidence: ${data.confidence}%`;
+    time.textContent = `Last update: ${fmtTime(data.timestamp)}`;
+    sourceIndicator.textContent = data.source === "esp32" ? "ESP32 Live Feed" : "Manual Test Payload";
+
+    const proba = data.probabilities || {};
+    const set = (id, pct, pctId) => {
+      document.getElementById(id).style.width = `${pct || 0}%`;
+      document.getElementById(pctId).textContent = `${(pct || 0).toFixed(1)}%`;
+    };
+
+    set("pbSafe", proba["SAFE"], "pctSafe");
+    set("pbWarn", proba["WARNING"], "pctWarn");
+    set("pbDanger", proba["DANGER"], "pctDanger");
+  }
+
+  function updateSensorCards(reading) {
+    document.getElementById("valGas").innerHTML = `${reading.gas_ppm}<span class="card-unit">ppm</span>`;
+    document.getElementById("valTemp").innerHTML = `${reading.temperature}<span class="card-unit">deg C</span>`;
+    document.getElementById("valMotion").textContent = reading.motion ? "Motion Detected" : "No Motion";
+  }
+
+  async function checkServer() {
+    const el = document.getElementById("serverStatus");
+    const sensorEl = document.getElementById("sensorStatus");
+    const sensorSeen = document.getElementById("sensorSeen");
+    const modeCard = document.getElementById("modeCard");
+    const manualHint = document.getElementById("manualHint");
+
+    try {
+      const res = await fetch(`${API_BASE}/status`, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const data = await res.json();
+        el.textContent = `Online | ${data.model}`;
+        el.className = "status-pill online";
+
+        const esp32 = data.esp32 || {};
+        if (esp32.connected) {
+          sensorEl.textContent = `ESP32 Connected${esp32.device_id ? ` | ${esp32.device_id}` : ""}`;
+          sensorEl.className = "status-pill online";
+          sensorSeen.textContent = `Last seen: ${fmtDateTime(esp32.last_seen)}`;
+          modeCard.textContent = "Live ESP32";
+          manualHint.textContent = "ESP32 is actively streaming live telemetry";
+        } else if (esp32.last_seen) {
+          sensorEl.textContent = "ESP32 Disconnected";
+          sensorEl.className = "status-pill offline";
+          sensorSeen.textContent = `Last seen: ${fmtDateTime(esp32.last_seen)}`;
+          modeCard.textContent = "Awaiting device";
+          manualHint.textContent = "Last live device signal expired";
+        } else {
+          sensorEl.textContent = "ESP32 Waiting";
+          sensorEl.className = "status-pill waiting";
+          sensorSeen.textContent = "No ESP32 data yet";
+          modeCard.textContent = "Manual / Test";
+          manualHint.textContent = "Manual mode active until ESP32 sends data";
+        }
+      }
+    } catch {
+      el.textContent = "Server Offline";
+      el.className = "status-pill offline";
+      sensorEl.textContent = "ESP32 Unknown";
+      sensorEl.className = "status-pill offline";
+      sensorSeen.textContent = "Server unreachable";
+      modeCard.textContent = "Offline";
+      manualHint.textContent = "API server is not reachable right now";
+    }
+  }
+
+  async function fetchHistory() {
+    try {
+      const res = await fetch(`${API_BASE}/history?limit=20`);
+      const rows = await res.json();
+      const tbody = document.getElementById("historyBody");
+
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No readings yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.slice().reverse().map((r) => `
+        <tr>
+          <td>${fmtTime(r.timestamp)}</td>
+          <td>${r.gas_ppm}</td>
+          <td>${r.temperature}</td>
+          <td>${r.motion ? "Yes" : "No"}</td>
+          <td><span class="badge badge-${r.prediction}">${r.prediction}</span></td>
+          <td>${r.confidence}%</td>
+        </tr>
+      `).join("");
+
+      const latest = rows[rows.length - 1];
+      applyHero(latest);
+      updateSensorCards(latest);
+    } catch (e) {
+      console.warn("fetchHistory error:", e);
+    }
+  }
+
+  async function manualPredict() {
+    const payload = {
+      gas_ppm: parseFloat(document.getElementById("inputGas").value) || 0,
+      temperature: parseFloat(document.getElementById("inputTemp").value) || 0,
+      motion: parseInt(document.getElementById("inputMotion").value) || 0,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/predict`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (data.status === "ok") {
+        applyHero({ ...payload, ...data, source: "manual" });
+        updateSensorCards({ ...payload, ...data });
+        fetchHistory();
+      } else {
+        alert(`Error: ${data.message}`);
+      }
+    } catch (e) {
+      alert(`Could not reach server. Is Flask running?\n${e}`);
+    }
+  }
+
+  checkServer();
+  fetchHistory();
+  setInterval(() => {
+    checkServer();
+    fetchHistory();
+  }, 5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+|--- temperature <= 30.02
+|   |--- class: 1
+|--- temperature >  30.02
+|   |--- temperature <= 45.00
+|   |   |--- class: 2
+|   |--- temperature >  45.00
+|   |   |--- temperature <= 45.05
+|   |   |   |--- class: 0
+|   |   |--- temperature >  45.05
+|   |   |   |--- class: 0

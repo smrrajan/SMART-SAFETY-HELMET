@@ -1,0 +1,16 @@
+{
+  "model_type": "RandomForestClassifier",
+  "features": [
+    "gas_ppm",
+    "temperature",
+    "motion"
+  ],
+  "classes": [
+    "DANGER",
+    "SAFE",
+    "WARNING"
+  ],
+  "n_estimators": 100,
+  "cv_accuracy": 0.9997,
+  "test_accuracy": 1.0
+}
