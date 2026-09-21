@@ -29,7 +29,7 @@ ENCODER_PATH = os.path.join(app_root, "ml/model/label_encoder.pkl")
 META_PATH    = os.path.join(app_root, "ml/model/model_metadata.json")
 DATA_DIR     = os.path.join(app_root, "data")
 DB_PATH      = os.path.join(DATA_DIR, "sensor_history.db")
-ESP32_STALE_AFTER_SECONDS = 15
+ESP32_STALE_AFTER_SECONDS = 30
 
 # Fallback for this repo layout: model/ instead of ml/model/
 if not os.path.exists(MODEL_PATH):
@@ -140,6 +140,36 @@ def fetch_history(limit):
     return readings
 
 
+def fetch_latest_reading(source=None):
+    query = """
+        SELECT timestamp, gas_ppm, temperature, motion, prediction, confidence, probabilities, source, device_id
+        FROM sensor_readings
+    """
+    params = []
+    if source:
+        query += " WHERE source = ?"
+        params.append(source)
+    query += " ORDER BY id DESC LIMIT 1"
+
+    with get_db_connection() as conn:
+        row = conn.execute(query, params).fetchone()
+
+    if not row:
+        return None
+
+    return {
+        "timestamp": row["timestamp"],
+        "gas_ppm": row["gas_ppm"],
+        "temperature": row["temperature"],
+        "motion": row["motion"],
+        "prediction": row["prediction"],
+        "confidence": row["confidence"],
+        "probabilities": json.loads(row["probabilities"]),
+        "source": row["source"],
+        "device_id": row["device_id"],
+    }
+
+
 def get_esp32_status():
     with get_db_connection() as conn:
         row = conn.execute(
@@ -166,6 +196,7 @@ def get_esp32_status():
 
     return {
         "connected": age_seconds <= ESP32_STALE_AFTER_SECONDS,
+        "age_seconds": round(age_seconds, 1),
         "last_seen": row["timestamp"],
         "device_id": row["device_id"],
         "stale_after_seconds": ESP32_STALE_AFTER_SECONDS,
@@ -177,6 +208,7 @@ init_db()
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 STATUS_EMOJI = {"SAFE": "✅", "WARNING": "⚠️", "DANGER": "🚨"}
 STATUS_COLOR = {"SAFE": "#2ecc71", "WARNING": "#f39c12", "DANGER": "#e74c3c"}
+STATUS_SEVERITY = {"SAFE": 0, "WARNING": 1, "DANGER": 2}
 
 def validate_input(data):
     """Returns (gas_ppm, temperature, motion) or raises ValueError."""
@@ -195,6 +227,18 @@ def validate_input(data):
         raise ValueError("temperature out of range [-40, 125]")
     return gas, temp, mot
 
+
+def threshold_prediction(gas, temp):
+    """
+    Apply the documented gas/temperature bands as a minimum severity.
+    This keeps borderline model outputs from understating a risky reading.
+    """
+    if gas >= 600 or temp >= 45:
+        return "DANGER"
+    if gas >= 300 or temp >= 30:
+        return "WARNING"
+    return "SAFE"
+
 # ─── Routes ───────────────────────────────────────────────────────────────────
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -206,8 +250,14 @@ def predict():
         pred_idx = model.predict(features)[0]
         proba    = model.predict_proba(features)[0]
 
-        label = encoder.inverse_transform([pred_idx])[0]
-        confidence = round(float(proba[pred_idx]) * 100, 1)
+        model_label = encoder.inverse_transform([pred_idx])[0]
+        threshold_label = threshold_prediction(gas, temp)
+        label = model_label
+        if STATUS_SEVERITY[threshold_label] > STATUS_SEVERITY[model_label]:
+            label = threshold_label
+
+        label_idx = int(np.where(encoder.classes_ == label)[0][0])
+        confidence = round(float(proba[label_idx]) * 100, 1)
 
         # Build probability dict per class
         class_proba = {
@@ -234,6 +284,8 @@ def predict():
             "prediction":  label,
             "confidence":  confidence,
             "probabilities": class_proba,
+            "model_prediction": model_label,
+            "threshold_prediction": threshold_label,
             "color":       STATUS_COLOR[label],
             "emoji":       STATUS_EMOJI[label],
             "timestamp":   reading["timestamp"],
@@ -248,6 +300,8 @@ def predict():
 @app.route("/status", methods=["GET"])
 def status():
     esp32_status = get_esp32_status()
+    latest_reading = fetch_latest_reading()
+    latest_esp32_reading = fetch_latest_reading(source="esp32")
     return jsonify({
         "status":       "online",
         "model":        metadata["model_type"],
@@ -257,6 +311,8 @@ def status():
         "total_readings": get_total_readings(),
         "database":     DB_PATH,
         "esp32":        esp32_status,
+        "latest_reading": latest_reading,
+        "latest_esp32_reading": latest_esp32_reading,
     }), 200
 
 

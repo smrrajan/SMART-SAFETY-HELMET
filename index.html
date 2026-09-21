@@ -864,6 +864,7 @@
           </div>
 
           <div class="subtle-note">When the ESP32 is online, the dashboard will automatically switch from manual test flow to live sensor monitoring status.</div>
+          <div class="subtle-note" id="apiHint">API endpoint: Detecting...</div>
         </aside>
       </section>
 
@@ -983,9 +984,63 @@
   </div>
 
 <script>
-  const API_BASE = window.location.protocol === "file:"
-    ? "http://localhost:5000"
-    : window.location.origin;
+  let API_BASE = "";
+
+  function buildApiCandidates() {
+    const candidates = [];
+    const add = (url) => {
+      if (!url || candidates.includes(url)) return;
+      candidates.push(url);
+    };
+
+    if (window.location.protocol === "file:") {
+      add("http://localhost:5000");
+      add("http://127.0.0.1:5000");
+      return candidates;
+    }
+
+    add(window.location.origin);
+
+    const { protocol, hostname, port } = window.location;
+    if (hostname) {
+      add(`${protocol}//${hostname}:5000`);
+    }
+
+    if (hostname === "localhost") {
+      add("http://127.0.0.1:5000");
+    } else if (hostname === "127.0.0.1") {
+      add("http://localhost:5000");
+    }
+
+    if (port && port !== "5000") {
+      add("http://localhost:5000");
+      add("http://127.0.0.1:5000");
+    }
+
+    return candidates;
+  }
+
+  async function resolveApiBase() {
+    const apiHint = document.getElementById("apiHint");
+    const candidates = buildApiCandidates();
+
+    for (const candidate of candidates) {
+      try {
+        const res = await fetch(`${candidate}/status`, { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          API_BASE = candidate;
+          apiHint.textContent = `API endpoint: ${candidate}`;
+          return candidate;
+        }
+      } catch (_) {
+        // Try the next likely API host.
+      }
+    }
+
+    API_BASE = candidates[0] || "http://localhost:5000";
+    apiHint.textContent = `API endpoint: ${API_BASE} (unreachable)`;
+    return API_BASE;
+  }
 
   function fmtTime(iso) {
     const d = new Date(iso);
@@ -996,6 +1051,12 @@
     if (!iso) return "No ESP32 data yet";
     const d = new Date(iso);
     return d.toLocaleString("en-GB", { hour12: false });
+  }
+
+  function isEsp32ReadingFresh(reading, staleAfterSeconds = 15) {
+    if (!reading || reading.source !== "esp32" || !reading.timestamp) return false;
+    const ageMs = Date.now() - new Date(reading.timestamp).getTime();
+    return ageMs <= staleAfterSeconds * 1000;
   }
 
   function applyHero(data) {
@@ -1043,6 +1104,9 @@
     const sensorSeen = document.getElementById("sensorSeen");
     const modeCard = document.getElementById("modeCard");
     const manualHint = document.getElementById("manualHint");
+    if (!API_BASE) {
+      await resolveApiBase();
+    }
 
     try {
       const res = await fetch(`${API_BASE}/status`, { signal: AbortSignal.timeout(3000) });
@@ -1052,12 +1116,24 @@
         el.className = "status-pill online";
 
         const esp32 = data.esp32 || {};
-        if (esp32.connected) {
+        const latestReading = data.latest_reading;
+        const latestEsp32Reading = data.latest_esp32_reading;
+        const esp32LooksOnline =
+          esp32.connected || isEsp32ReadingFresh(latestEsp32Reading, esp32.stale_after_seconds || 30);
+
+        if (esp32LooksOnline) {
           sensorEl.textContent = `ESP32 Connected${esp32.device_id ? ` | ${esp32.device_id}` : ""}`;
           sensorEl.className = "status-pill online";
           sensorSeen.textContent = `Last seen: ${fmtDateTime(esp32.last_seen)}`;
           modeCard.textContent = "Live ESP32";
           manualHint.textContent = "ESP32 is actively streaming live telemetry";
+          if (isEsp32ReadingFresh(latestEsp32Reading, esp32.stale_after_seconds || 30)) {
+            applyHero(latestEsp32Reading);
+            updateSensorCards(latestEsp32Reading);
+          } else if (isEsp32ReadingFresh(latestReading, esp32.stale_after_seconds || 30)) {
+            applyHero(latestReading);
+            updateSensorCards(latestReading);
+          }
         } else if (esp32.last_seen) {
           sensorEl.textContent = "ESP32 Disconnected";
           sensorEl.className = "status-pill offline";
@@ -1071,6 +1147,8 @@
           modeCard.textContent = "Manual / Test";
           manualHint.textContent = "Manual mode active until ESP32 sends data";
         }
+      } else {
+        throw new Error(`Status request failed with ${res.status}`);
       }
     } catch {
       el.textContent = "Server Offline";
@@ -1084,8 +1162,14 @@
   }
 
   async function fetchHistory() {
+    if (!API_BASE) {
+      await resolveApiBase();
+    }
     try {
       const res = await fetch(`${API_BASE}/history?limit=20`);
+      if (!res.ok) {
+        throw new Error(`History request failed with ${res.status}`);
+      }
       const rows = await res.json();
       const tbody = document.getElementById("historyBody");
 
@@ -1114,6 +1198,9 @@
   }
 
   async function manualPredict() {
+    if (!API_BASE) {
+      await resolveApiBase();
+    }
     const payload = {
       gas_ppm: parseFloat(document.getElementById("inputGas").value) || 0,
       temperature: parseFloat(document.getElementById("inputTemp").value) || 0,
@@ -1140,8 +1227,10 @@
     }
   }
 
-  checkServer();
-  fetchHistory();
+  resolveApiBase().then(() => {
+    checkServer();
+    fetchHistory();
+  });
   setInterval(() => {
     checkServer();
     fetchHistory();
